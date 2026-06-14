@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { MOCK_RESTAURANTS } from '../data/restaurants.mock';
 import { haversineDistance } from '../utils/haversine';
+import { log } from '../services/logger.service';
 
 const router = Router();
 
@@ -50,31 +51,27 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/fetch-restaurants', (req: Request, res: Response) => {
+router.get('/fetch-restaurants', async (req: Request, res: Response) => {
+  const start = Date.now();
+  const ip = (req.headers['x-forwarded-for'] as string) ?? req.socket.remoteAddress ?? '';
   const lat = parseFloat(req.query.lat as string);
   const lng = parseFloat(req.query.lng as string);
 
   if (isNaN(lat) || isNaN(lng)) {
-    res.status(400).json({
-      success: false,
-      message: 'Se requieren los parámetros lat y lng',
-    });
+    log({ service: 'ms-ue-restaurantes', level: 'warn', event: 'fetch-restaurants', ip, metadata: { error: 'missing_params' } });
+    res.status(400).json({ success: false, message: 'Se requieren los parámetros lat y lng' });
     return;
   }
 
   if (lat < -90 || lat > 90) {
-    res.status(400).json({
-      success: false,
-      message: 'lat debe estar entre -90 y 90',
-    });
+    log({ service: 'ms-ue-restaurantes', level: 'warn', event: 'fetch-restaurants', ip, metadata: { error: 'invalid_lat', lat } });
+    res.status(400).json({ success: false, message: 'lat debe estar entre -90 y 90' });
     return;
   }
 
   if (lng < -180 || lng > 180) {
-    res.status(400).json({
-      success: false,
-      message: 'lng debe estar entre -180 y 180',
-    });
+    log({ service: 'ms-ue-restaurantes', level: 'warn', event: 'fetch-restaurants', ip, metadata: { error: 'invalid_lng', lng } });
+    res.status(400).json({ success: false, message: 'lng debe estar entre -180 y 180' });
     return;
   }
 
@@ -91,11 +88,10 @@ router.get('/fetch-restaurants', (req: Request, res: Response) => {
     // .filter((r) => r.location.distance <= radius)
     .sort((a, b) => a.location.distance - b.location.distance);
 
-  res.json({
-    success: true,
-    total: restaurants.length,
-    data: restaurants,
-  });
+  const duration_ms = Date.now() - start;
+  log({ service: 'ms-ue-restaurantes', level: 'info', event: 'fetch-restaurants', ip, duration_ms, metadata: { lat, lng, total: restaurants.length } });
+
+  res.json({ success: true, total: restaurants.length, data: restaurants });
 });
 
 export default router;
