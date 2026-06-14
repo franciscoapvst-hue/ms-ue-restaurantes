@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 import restaurantsRoute from './routes/restaurants.route';
+import logRoute from './routes/log.route';
 import { swaggerSpec } from './swagger';
 import { initDatabase } from './config/database';
 
@@ -14,6 +15,7 @@ app.use(express.json());
 
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/', restaurantsRoute);
+app.use('/', logRoute);
 
 app.get('/health', (_, res) => {
   res.json({ status: 'ok', service: 'ms-ue-restaurantes' });
