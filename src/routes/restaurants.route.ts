@@ -58,19 +58,19 @@ router.get('/fetch-restaurants', async (req: Request, res: Response) => {
   const lng = parseFloat(req.query.lng as string);
 
   if (isNaN(lat) || isNaN(lng)) {
-    log({ service: 'ms-ue-restaurantes', level: 'warn', event: 'fetch-restaurants', ip, metadata: { error: 'missing_params' } });
+    await log({ service: 'ms-ue-restaurantes', level: 'warn', event: 'fetch-restaurants', ip, metadata: { error: 'missing_params' } });
     res.status(400).json({ success: false, message: 'Se requieren los parámetros lat y lng' });
     return;
   }
 
   if (lat < -90 || lat > 90) {
-    log({ service: 'ms-ue-restaurantes', level: 'warn', event: 'fetch-restaurants', ip, metadata: { error: 'invalid_lat', lat } });
+    await log({ service: 'ms-ue-restaurantes', level: 'warn', event: 'fetch-restaurants', ip, metadata: { error: 'invalid_lat', lat } });
     res.status(400).json({ success: false, message: 'lat debe estar entre -90 y 90' });
     return;
   }
 
   if (lng < -180 || lng > 180) {
-    log({ service: 'ms-ue-restaurantes', level: 'warn', event: 'fetch-restaurants', ip, metadata: { error: 'invalid_lng', lng } });
+    await log({ service: 'ms-ue-restaurantes', level: 'warn', event: 'fetch-restaurants', ip, metadata: { error: 'invalid_lng', lng } });
     res.status(400).json({ success: false, message: 'lng debe estar entre -180 y 180' });
     return;
   }
@@ -89,7 +89,7 @@ router.get('/fetch-restaurants', async (req: Request, res: Response) => {
     .sort((a, b) => a.location.distance - b.location.distance);
 
   const duration_ms = Date.now() - start;
-  log({ service: 'ms-ue-restaurantes', level: 'info', event: 'fetch-restaurants', ip, duration_ms, metadata: { lat, lng, total: restaurants.length } });
+  await log({ service: 'ms-ue-restaurantes', level: 'info', event: 'fetch-restaurants', ip, duration_ms, metadata: { lat, lng, total: restaurants.length } });
 
   res.json({ success: true, total: restaurants.length, data: restaurants });
 });

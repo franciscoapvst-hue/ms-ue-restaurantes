@@ -2,6 +2,7 @@ node_modules/
 dist/
 .env
 firebase-service-account.json
+logs/
 .claude/
 CLAUDE.md
 AGENTS.md

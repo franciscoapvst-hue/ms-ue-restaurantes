@@ -1,4 +1,6 @@
-import { pool } from '../config/database';
+import { appendFileSync, mkdirSync } from 'fs';
+import { join } from 'path';
+import { supabase } from '../config/database';
 
 type LogLevel = 'info' | 'warn' | 'error';
 
@@ -11,22 +13,33 @@ interface LogEntry {
   duration_ms?: number;
 }
 
+const LOG_DIR = join(process.cwd(), 'logs');
+const LOG_FILE = join(LOG_DIR, 'app.log');
+
+mkdirSync(LOG_DIR, { recursive: true });
+
+function writeLocalLog(entry: LogEntry): void {
+  const line = JSON.stringify({
+    timestamp: new Date().toISOString(),
+    ...entry,
+  });
+  appendFileSync(LOG_FILE, line + '\n');
+}
+
 export async function log(entry: LogEntry): Promise<void> {
+  writeLocalLog(entry);
+
   try {
-    await pool.query(
-      `INSERT INTO logs (service, level, event, metadata, ip, duration_ms)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [
-        entry.service,
-        entry.level,
-        entry.event,
-        entry.metadata ? JSON.stringify(entry.metadata) : null,
-        entry.ip ?? null,
-        entry.duration_ms ?? null,
-      ]
-    );
+    const { error } = await supabase.from('logs').insert({
+      service: entry.service,
+      level: entry.level,
+      event: entry.event,
+      metadata: entry.metadata ?? null,
+      ip: entry.ip ?? null,
+      duration_ms: entry.duration_ms ?? null,
+    });
+    if (error) throw error;
   } catch (err) {
-    // El log nunca debe romper el flujo principal
-    console.error('Error al guardar log:', err);
+    writeLocalLog({ service: entry.service, level: 'error', event: 'supabase-log-failed', metadata: { err: String(err) } });
   }
 }
